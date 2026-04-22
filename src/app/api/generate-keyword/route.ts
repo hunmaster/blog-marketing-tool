@@ -2,19 +2,16 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey || apiKey === 'your-api-key-here') {
-    return Response.json(
-      { error: 'API 키가 설정되지 않았습니다. Vercel 환경변수에 ANTHROPIC_API_KEY를 설정해주세요.' },
-      { status: 500 }
-    )
-  }
-
-  const anthropic = new Anthropic({ apiKey })
-
   try {
     const body = await request.json()
-    const { businessInfo, customTopic } = body
+    const { businessInfo, customTopic, apiKey: userApiKey } = body
+
+    const apiKey = userApiKey || process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return Response.json({ error: 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.' }, { status: 400 })
+    }
+
+    const anthropic = new Anthropic({ apiKey })
 
     const systemPrompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
 

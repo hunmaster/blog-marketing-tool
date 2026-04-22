@@ -2,20 +2,16 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  // API 키 체크
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey || apiKey === 'your-api-key-here') {
-    return Response.json(
-      { error: 'API 키가 설정되지 않았습니다. Vercel 환경변수에 ANTHROPIC_API_KEY를 설정해주세요.' },
-      { status: 500 }
-    )
-  }
-
-  const anthropic = new Anthropic({ apiKey })
-
   try {
     const body = await request.json()
-    const { businessInfo, style, topic, keywords, photos } = body
+    const { businessInfo, style, topic, keywords, photos, apiKey: userApiKey } = body
+
+    const apiKey = userApiKey || process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return Response.json({ error: 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.' }, { status: 400 })
+    }
+
+    const anthropic = new Anthropic({ apiKey })
 
     const toneMap: Record<string, string> = {
       friendly: '친근하고 따뜻한 이웃 같은 말투. 해요체 위주. "~했어요", "~더라고요" 같은 구어체 자연스럽게 사용.',

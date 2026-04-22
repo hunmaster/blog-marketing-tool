@@ -2,19 +2,16 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey || apiKey === 'your-api-key-here') {
-    return Response.json(
-      { error: 'API 키가 설정되지 않았습니다. Vercel 환경변수에 ANTHROPIC_API_KEY를 설정해주세요.' },
-      { status: 500 }
-    )
-  }
-
-  const anthropic = new Anthropic({ apiKey })
-
   try {
     const body = await request.json()
-    const { businessInfo, captionType, subject } = body
+    const { businessInfo, captionType, subject, apiKey: userApiKey } = body
+
+    const apiKey = userApiKey || process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return Response.json({ error: 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.' }, { status: 400 })
+    }
+
+    const anthropic = new Anthropic({ apiKey })
 
     const typeMap: Record<string, string> = {
       hook: '후킹형: 첫 줄에서 시선을 확 잡는 스타일. 질문이나 놀라운 사실로 시작.',

@@ -50,7 +50,7 @@ function resizeImage(dataUrl: string, maxWidth = 800): Promise<string> {
   })
 }
 
-export default function BlogGenerator({ businessInfo }: { businessInfo: BusinessInfo }) {
+export default function BlogGenerator({ businessInfo, apiKey }: { businessInfo: BusinessInfo; apiKey: string }) {
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [style, setStyle] = useState('review')
   const [topic, setTopic] = useState('')
@@ -61,7 +61,35 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 사진 업로드 (리사이즈 포함)
+  // 업종 기반 사진 역할 자동 추천 (무료)
+  const guessPhotoRole = (index: number, totalNew: number): string => {
+    const cat = businessInfo.category
+    const isConstruction = ['인테리어/시공', '청소/이사'].includes(cat)
+    const isFood = ['음식점/카페'].includes(cat)
+    const isBeauty = ['미용/뷰티'].includes(cat)
+    const isAuto = ['자동차/정비'].includes(cat)
+
+    if (isConstruction || isAuto) {
+      // 시공/정비: 첫 사진=시공전, 마지막=시공후, 나머지=작업과정
+      if (totalNew >= 3) {
+        if (index === 0) return 'before'
+        if (index === totalNew - 1) return 'after'
+        return 'process'
+      }
+      if (totalNew === 2) return index === 0 ? 'before' : 'after'
+      return 'result'
+    }
+    if (isFood) return index === 0 ? 'product' : 'detail'
+    if (isBeauty) {
+      if (totalNew >= 2) return index === 0 ? 'before' : index === totalNew - 1 ? 'after' : 'process'
+      return 'result'
+    }
+    if (['부동산', '교육/학원', '병원/의료'].includes(cat)) return 'space'
+    if (['꽃/플라워', '반려동물'].includes(cat)) return 'product'
+    return 'etc'
+  }
+
+  // 사진 업로드 (리사이즈 + 역할 자동 추천)
   const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
@@ -69,7 +97,8 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
     const newFiles = Array.from(files).slice(0, 10 - photos.length)
     const newPhotos: PhotoItem[] = []
 
-    for (const file of newFiles) {
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i]
       const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader()
         reader.onload = (ev) => resolve(ev.target?.result as string)
@@ -77,13 +106,13 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
       })
 
       const resized = await resizeImage(dataUrl)
-      newPhotos.push({ src: resized, role: 'etc', caption: '' })
+      const autoRole = guessPhotoRole(i, newFiles.length)
+      newPhotos.push({ src: resized, role: autoRole, caption: '' })
     }
 
     setPhotos((prev) => [...prev, ...newPhotos])
-    // input 초기화 (같은 파일 재선택 가능)
     e.target.value = ''
-  }, [photos.length])
+  }, [photos.length, businessInfo.category])
 
   const removePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index))
@@ -127,6 +156,7 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
           style,
           topic,
           keywords,
+          apiKey,
           photos: photos.map((p) => ({
             src: p.src,
             role: p.role,

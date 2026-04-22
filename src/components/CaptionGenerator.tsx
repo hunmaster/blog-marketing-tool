@@ -10,7 +10,7 @@ const CAPTION_TYPES = [
   { value: 'before-after', label: '비포애프터형', desc: '변화를 보여주는 스타일' },
 ]
 
-export default function CaptionGenerator({ businessInfo }: { businessInfo: BusinessInfo }) {
+export default function CaptionGenerator({ businessInfo, apiKey }: { businessInfo: BusinessInfo; apiKey: string }) {
   const [captionType, setCaptionType] = useState('hook')
   const [subject, setSubject] = useState('')
   const [result, setResult] = useState('')
@@ -27,7 +27,7 @@ export default function CaptionGenerator({ businessInfo }: { businessInfo: Busin
       const res = await fetch('/api/generate-caption', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessInfo, captionType, subject }),
+        body: JSON.stringify({ businessInfo, captionType, subject, apiKey }),
       })
 
       if (!res.ok) {
