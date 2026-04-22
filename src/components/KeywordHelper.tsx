@@ -22,8 +22,15 @@ export default function KeywordHelper({ businessInfo }: { businessInfo: Business
       })
 
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || '생성에 실패했습니다')
+        let errorMsg = '생성에 실패했습니다'
+        const contentType = res.headers.get('content-type') || ''
+        if (contentType.includes('application/json')) {
+          const err = await res.json()
+          errorMsg = err.error || errorMsg
+        } else {
+          errorMsg = `서버 오류 (${res.status}): 잠시 후 다시 시도해주세요.`
+        }
+        throw new Error(errorMsg)
       }
 
       const reader = res.body?.getReader()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import type { BusinessInfo } from '@/app/page'
 
 const BLOG_STYLES = [
@@ -11,44 +11,108 @@ const BLOG_STYLES = [
   { value: 'qna', label: 'Q&A 형식', desc: '자주 묻는 질문에 답하는 글' },
 ]
 
+const PHOTO_ROLES = [
+  { value: 'before', label: '시공 전', color: '#3B82F6' },
+  { value: 'after', label: '시공 후', color: '#10B981' },
+  { value: 'process', label: '작업 과정', color: '#F59E0B' },
+  { value: 'result', label: '완성 결과', color: '#10B981' },
+  { value: 'detail', label: '디테일 컷', color: '#8B5CF6' },
+  { value: 'space', label: '매장/공간', color: '#EC4899' },
+  { value: 'product', label: '상품/메뉴', color: '#F97316' },
+  { value: 'etc', label: '기타', color: '#6B7280' },
+]
+
+type PhotoItem = {
+  src: string
+  role: string
+  caption: string
+}
+
+// 이미지를 리사이즈하여 base64로 변환 (API 전송용)
+function resizeImage(dataUrl: string, maxWidth = 800): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let w = img.width
+      let h = img.height
+      if (w > maxWidth) {
+        h = (h * maxWidth) / w
+        w = maxWidth
+      }
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', 0.7))
+    }
+    img.src = dataUrl
+  })
+}
+
 export default function BlogGenerator({ businessInfo }: { businessInfo: BusinessInfo }) {
-  const [photos, setPhotos] = useState<string[]>([])
-  const [photoFiles, setPhotoFiles] = useState<File[]>([])
+  const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [style, setStyle] = useState('review')
   const [topic, setTopic] = useState('')
   const [keywords, setKeywords] = useState('')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 사진 업로드 (리사이즈 포함)
+  const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
     const newFiles = Array.from(files).slice(0, 10 - photos.length)
-    const newPreviews: string[] = []
-    const newPhotoFiles: File[] = []
+    const newPhotos: PhotoItem[] = []
 
-    newFiles.forEach((file) => {
-      newPhotoFiles.push(file)
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        newPreviews.push(ev.target?.result as string)
-        if (newPreviews.length === newFiles.length) {
-          setPhotos((prev) => [...prev, ...newPreviews])
-          setPhotoFiles((prev) => [...prev, ...newPhotoFiles])
-        }
-      }
-      reader.readAsDataURL(file)
-    })
-  }
+    for (const file of newFiles) {
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => resolve(ev.target?.result as string)
+        reader.readAsDataURL(file)
+      })
+
+      const resized = await resizeImage(dataUrl)
+      newPhotos.push({ src: resized, role: 'etc', caption: '' })
+    }
+
+    setPhotos((prev) => [...prev, ...newPhotos])
+    // input 초기화 (같은 파일 재선택 가능)
+    e.target.value = ''
+  }, [photos.length])
 
   const removePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index))
-    setPhotoFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const updatePhotoRole = (index: number, role: string) => {
+    setPhotos((prev) => prev.map((p, i) => i === index ? { ...p, role } : p))
+  }
+
+  const updatePhotoCaption = (index: number, caption: string) => {
+    setPhotos((prev) => prev.map((p, i) => i === index ? { ...p, caption } : p))
+  }
+
+  // 드래그앤드롭 순서 변경
+  const handleDragStart = (index: number) => setDragIndex(index)
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (dragIndex === null || dragIndex === index) return
+    setPhotos((prev) => {
+      const updated = [...prev]
+      const [moved] = updated.splice(dragIndex, 1)
+      updated.splice(index, 0, moved)
+      return updated
+    })
+    setDragIndex(index)
+  }
+  const handleDragEnd = () => setDragIndex(null)
+
+  // 글 생성
   const handleGenerate = async () => {
     setLoading(true)
     setResult('')
@@ -63,14 +127,30 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
           style,
           topic,
           keywords,
-          photoCount: photos.length,
-          photos: photos.slice(0, 5), // 최대 5장 base64 전송
+          photos: photos.map((p) => ({
+            src: p.src,
+            role: p.role,
+            caption: p.caption,
+          })),
         }),
       })
 
+      // 에러 응답 처리 (HTML/JSON 모두 대응)
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || '생성에 실패했습니다')
+        let errorMsg = '생성에 실패했습니다'
+        const contentType = res.headers.get('content-type') || ''
+        if (contentType.includes('application/json')) {
+          const err = await res.json()
+          errorMsg = err.error || errorMsg
+        } else {
+          const text = await res.text()
+          if (text.includes('ANTHROPIC_API_KEY')) {
+            errorMsg = 'API 키가 설정되지 않았습니다. Vercel 환경변수를 확인해주세요.'
+          } else {
+            errorMsg = `서버 오류 (${res.status}): 잠시 후 다시 시도해주세요.`
+          }
+        }
+        throw new Error(errorMsg)
       }
 
       const reader = res.body?.getReader()
@@ -98,13 +178,18 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const getRoleInfo = (role: string) => PHOTO_ROLES.find((r) => r.value === role) || PHOTO_ROLES[7]
+
   return (
     <div className="space-y-5">
       {/* 사진 업로드 */}
       <div className="bg-[var(--color-gray-bg)] rounded-2xl p-5">
-        <label className="block text-sm font-semibold text-[var(--color-dark)] mb-3">
+        <label className="block text-sm font-semibold text-[var(--color-dark)] mb-1">
           사진 올리기 <span className="font-normal text-gray-400">(최대 10장)</span>
         </label>
+        <p className="text-xs text-gray-400 mb-3">
+          사진을 드래그해서 순서를 바꿀 수 있어요. 각 사진에 역할과 설명을 달아주면 더 정확한 글이 나와요.
+        </p>
 
         <input
           ref={fileInputRef}
@@ -127,29 +212,85 @@ export default function BlogGenerator({ businessInfo }: { businessInfo: Business
             </div>
           </button>
         ) : (
-          <div>
-            <div className="photo-grid mb-3">
-              {photos.map((photo, i) => (
-                <div key={i} className="relative group">
-                  <img src={photo} alt={`사진 ${i + 1}`} />
-                  <button
-                    onClick={() => removePhoto(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-              {photos.length < 10 && (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-[100px] border-2 border-dashed border-[var(--color-border)] rounded-lg flex items-center justify-center text-gray-400 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
+          <div className="space-y-3">
+            {photos.map((photo, i) => {
+              const roleInfo = getRoleInfo(photo.role)
+              return (
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex gap-3 p-3 bg-white rounded-xl border transition-all cursor-grab active:cursor-grabbing ${
+                    dragIndex === i ? 'border-[var(--color-primary)] shadow-md scale-[1.01]' : 'border-[var(--color-border)]'
+                  }`}
                 >
-                  +
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-gray-400">{photos.length}장 선택됨</p>
+                  {/* 순서 표시 + 사진 */}
+                  <div className="relative shrink-0">
+                    <img
+                      src={photo.src}
+                      alt={`사진 ${i + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                    <div className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[var(--color-dark)] text-white text-[10px] font-bold flex items-center justify-center">
+                      {i + 1}
+                    </div>
+                    <button
+                      onClick={() => removePhoto(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                    >
+                      &times;
+                    </button>
+                  </div>
+
+                  {/* 역할 + 설명 */}
+                  <div className="flex-1 min-w-0">
+                    {/* 역할 태그 */}
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {PHOTO_ROLES.map((role) => (
+                        <button
+                          key={role.value}
+                          onClick={() => updatePhotoRole(i, role.value)}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all"
+                          style={
+                            photo.role === role.value
+                              ? { backgroundColor: role.color, color: 'white', borderColor: role.color }
+                              : { borderColor: '#E5E7EB', color: '#9CA3AF' }
+                          }
+                        >
+                          {role.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* 사진 설명 */}
+                    <input
+                      type="text"
+                      placeholder={`이 사진에 대해 간단히 설명해주세요 (예: ${
+                        photo.role === 'before' ? '시공 전 낡은 욕실 상태' :
+                        photo.role === 'after' ? '시공 완료된 욕실' :
+                        photo.role === 'process' ? '타일 시공 중인 모습' :
+                        '사진 설명'
+                      })`}
+                      value={photo.caption}
+                      onChange={(e) => updatePhotoCaption(i, e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-gray-bg)]"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* 사진 추가 버튼 */}
+            {photos.length < 10 && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-3 border-2 border-dashed border-[var(--color-border)] rounded-xl text-sm text-gray-400 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
+              >
+                + 사진 추가하기 ({photos.length}/10)
+              </button>
+            )}
           </div>
         )}
       </div>

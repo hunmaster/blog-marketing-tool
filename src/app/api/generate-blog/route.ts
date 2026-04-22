@@ -1,14 +1,21 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
-
 export async function POST(request: NextRequest) {
+  // API 키 체크
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey || apiKey === 'your-api-key-here') {
+    return Response.json(
+      { error: 'API 키가 설정되지 않았습니다. Vercel 환경변수에 ANTHROPIC_API_KEY를 설정해주세요.' },
+      { status: 500 }
+    )
+  }
+
+  const anthropic = new Anthropic({ apiKey })
+
   try {
     const body = await request.json()
-    const { businessInfo, style, topic, keywords, photoCount, photos } = body
+    const { businessInfo, style, topic, keywords, photos } = body
 
     const toneMap: Record<string, string> = {
       friendly: '친근하고 따뜻한 이웃 같은 말투. 해요체 위주. "~했어요", "~더라고요" 같은 구어체 자연스럽게 사용.',
@@ -24,13 +31,29 @@ export async function POST(request: NextRequest) {
       qna: 'Q&A 형식. 고객들이 자주 묻는 질문 3-5개를 뽑아서 하나씩 답변하기.',
     }
 
-    // 사진 분석을 위한 content 구성
+    const roleLabels: Record<string, string> = {
+      before: '시공 전',
+      after: '시공 후',
+      process: '작업 과정',
+      result: '완성 결과',
+      detail: '디테일 컷',
+      space: '매장/공간',
+      product: '상품/메뉴',
+      etc: '기타',
+    }
+
+    // 사진 정보를 텍스트로 정리
+    const photoDescriptions: string[] = []
     const contentParts: Anthropic.Messages.ContentBlockParam[] = []
 
-    // 사진이 있으면 Vision으로 분석
     if (photos && photos.length > 0) {
-      for (const photo of photos) {
-        const base64Match = photo.match(/^data:image\/(.*?);base64,(.*)$/)
+      // 최대 5장만 이미지로 전송 (토큰 절약)
+      const photosToSend = photos.slice(0, 5)
+
+      for (let i = 0; i < photosToSend.length; i++) {
+        const photo = photosToSend[i]
+        const base64Match = photo.src?.match(/^data:image\/(.*?);base64,(.*)$/)
+
         if (base64Match) {
           contentParts.push({
             type: 'image',
@@ -41,12 +64,28 @@ export async function POST(request: NextRequest) {
             },
           })
         }
+
+        const roleLabel = roleLabels[photo.role] || '기타'
+        const captionText = photo.caption ? ` - ${photo.caption}` : ''
+        photoDescriptions.push(`사진 ${i + 1}: [${roleLabel}]${captionText}`)
+      }
+
+      // 5장 이후 사진은 텍스트 설명만
+      for (let i = 5; i < photos.length; i++) {
+        const photo = photos[i]
+        const roleLabel = roleLabels[photo.role] || '기타'
+        const captionText = photo.caption ? ` - ${photo.caption}` : ''
+        photoDescriptions.push(`사진 ${i + 1}: [${roleLabel}]${captionText} (이미지 미첨부)`)
       }
     }
 
+    const photoSection = photoDescriptions.length > 0
+      ? `\n\n사진 구성 (사용자가 올린 순서대로):\n${photoDescriptions.join('\n')}`
+      : '\n\n(사진 없음 - 텍스트 기반으로 작성)'
+
     contentParts.push({
       type: 'text',
-      text: `위 사진들을 참고해서 블로그 글을 작성해주세요.
+      text: `블로그 글을 작성해주세요.
 
 업체 정보:
 - 업체명: ${businessInfo.name}
@@ -58,10 +97,14 @@ export async function POST(request: NextRequest) {
 - 글 스타일: ${styleMap[style] || style}
 - 주제: ${topic || '사진 내용을 바탕으로 자유롭게'}
 - 넣어야 할 키워드: ${keywords || '없음'}
-- 업로드된 사진 수: ${photoCount}장
+- 총 사진 수: ${photos?.length || 0}장
+${photoSection}
 
-사진이 있다면 사진 속 내용(시공 현장, 음식, 매장 등)을 자연스럽게 묘사해주세요.
-글 중간중간에 [사진] 이라고 표시해서 사진 넣을 위치를 알려주세요.`,
+중요: 사진의 역할(시공 전/후, 작업 과정 등)과 설명을 참고해서 글의 흐름을 구성하세요.
+- "시공 전" → "작업 과정" → "시공 후" 순서라면 자연스럽게 변화 과정을 서술
+- "비포&애프터"라면 전후 대비를 강조
+- 글 중간에 [사진 1], [사진 2] 등으로 사진 삽입 위치를 표시해주세요
+- 사용자가 적어준 사진 설명이 있다면 그 내용을 글에 자연스럽게 반영하세요`,
     })
 
     const systemPrompt = `당신은 소상공인의 네이버 블로그 글을 대신 써주는 작성자입니다.
@@ -81,6 +124,7 @@ export async function POST(request: NextRequest) {
 8. 소제목은 2-3개 정도만 사용하고, 없이 쓰는 것도 괜찮습니다.
 9. 네이버 블로그에 바로 붙여넣기 할 수 있도록 깔끔하게 작성하세요.
 10. 연락처 유도 문구는 글 마지막에 자연스럽게 한 번만 넣으세요.
+11. 사진 삽입 위치는 [사진 1], [사진 2] 형태로 표시하세요. 사진의 역할(시공 전/후 등)에 맞게 글 흐름 속에 자연스럽게 배치하세요.
 
 절대 하지 말 것:
 - 마크다운 문법(#, **, - 등) 사용 금지. 순수 텍스트로만 작성.
@@ -97,12 +141,19 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
       async start(controller) {
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(event.delta.text))
+        try {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
           }
+          controller.close()
+        } catch (streamError) {
+          console.error('Stream error:', streamError)
+          const msg = streamError instanceof Error ? streamError.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[오류 발생: ${msg}]`))
+          controller.close()
         }
-        controller.close()
       },
     })
 

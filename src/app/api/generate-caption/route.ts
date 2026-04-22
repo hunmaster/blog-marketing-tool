@@ -1,11 +1,17 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
-
 export async function POST(request: NextRequest) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey || apiKey === 'your-api-key-here') {
+    return Response.json(
+      { error: 'API 키가 설정되지 않았습니다. Vercel 환경변수에 ANTHROPIC_API_KEY를 설정해주세요.' },
+      { status: 500 }
+    )
+  }
+
+  const anthropic = new Anthropic({ apiKey })
+
   try {
     const body = await request.json()
     const { businessInfo, captionType, subject } = body
@@ -63,12 +69,19 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
       async start(controller) {
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(event.delta.text))
+        try {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
           }
+          controller.close()
+        } catch (streamError) {
+          console.error('Stream error:', streamError)
+          const msg = streamError instanceof Error ? streamError.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[오류 발생: ${msg}]`))
+          controller.close()
         }
-        controller.close()
       },
     })
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { BusinessInfo } from '@/app/page'
+import HeroIllustration from '@/components/HeroIllustration'
 
 const CATEGORIES = [
   '인테리어/시공', '음식점/카페', '미용/뷰티', '자동차/정비',
@@ -44,10 +45,8 @@ export default function BusinessSetup({ onComplete, isModal, defaultValues }: Pr
   return (
     <div className={isModal ? 'p-6' : 'max-w-lg mx-auto px-4 pt-16'}>
       {!isModal && (
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">글</span>
-          </div>
+        <div className="text-center mb-8">
+          <HeroIllustration />
           <h1 className="text-2xl font-bold text-[var(--color-dark)] mb-2">글써주는집</h1>
           <p className="text-gray-500 text-sm">사진만 올리면 블로그 글이 뚝딱</p>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import BusinessSetup from '@/components/BusinessSetup'
 import BlogGenerator from '@/components/BlogGenerator'
@@ -21,13 +21,42 @@ export default function Home() {
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('blog')
   const [isSetupOpen, setIsSetupOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  // localStorage에서 업체 정보 복원
+  useEffect(() => {
+    const saved = localStorage.getItem('businessInfo')
+    if (saved) {
+      try {
+        setBusinessInfo(JSON.parse(saved))
+      } catch { /* ignore */ }
+    }
+    setLoaded(true)
+  }, [])
+
+  // 업체 정보 저장
+  const handleSetBusiness = (info: BusinessInfo) => {
+    setBusinessInfo(info)
+    localStorage.setItem('businessInfo', JSON.stringify(info))
+  }
+
+  // 업체 정보 리셋 (초기화면으로)
+  const handleReset = () => {
+    setBusinessInfo(null)
+    localStorage.removeItem('businessInfo')
+  }
+
+  // 로딩 중 깜빡임 방지
+  if (!loaded) {
+    return <div className="min-h-screen bg-white" />
+  }
 
   // 최초 진입 시 업체 정보 입력
   if (!businessInfo) {
     return (
       <div className="min-h-screen bg-white">
-        <Header onSetup={() => {}} />
-        <BusinessSetup onComplete={(info) => setBusinessInfo(info)} isModal={false} />
+        <Header />
+        <BusinessSetup onComplete={handleSetBusiness} isModal={false} />
       </div>
     )
   }
@@ -40,18 +69,18 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header onSetup={() => setIsSetupOpen(true)} />
+      <Header onSetup={() => setIsSetupOpen(true)} onReset={handleReset} />
 
       {/* 업체 정보 수정 모달 */}
       {isSetupOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setIsSetupOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]">
               <h3 className="text-lg font-semibold">업체 정보 수정</h3>
               <button onClick={() => setIsSetupOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
             </div>
             <BusinessSetup
-              onComplete={(info) => { setBusinessInfo(info); setIsSetupOpen(false) }}
+              onComplete={(info) => { handleSetBusiness(info); setIsSetupOpen(false) }}
               isModal={true}
               defaultValues={businessInfo}
             />
