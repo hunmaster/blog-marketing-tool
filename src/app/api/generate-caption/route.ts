@@ -4,11 +4,11 @@ import { NextRequest } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { businessInfo, captionType, subject, apiKey } = body
+    const { businessInfo, captionType, subject } = body
 
-    const geminiKey = process.env.GEMINI_API_KEY || apiKey
+    const geminiKey = process.env.GEMINI_API_KEY
     if (!geminiKey) {
-      return Response.json({ error: 'API 키가 필요합니다.' }, { status: 400 })
+      return Response.json({ error: '서버 설정 오류입니다. 관리자에게 문의해주세요.' }, { status: 500 })
     }
 
     const typeMap: Record<string, string> = {

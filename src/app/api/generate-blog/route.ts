@@ -1,12 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
+  const geminiKey = process.env.GEMINI_API_KEY
+  if (!geminiKey) {
+    return Response.json({ error: '서버 설정 오류입니다. 관리자에게 문의해주세요.' }, { status: 500 })
+  }
+
   try {
     const body = await request.json()
-    const { businessInfo, style, topic, keywords, photos, apiKey, mode } = body
-    // mode: 'free' (Gemini) | 'refine' (Claude로 다듬기)
+    const { businessInfo, style, topic, keywords, photos } = body
 
     const toneMap: Record<string, string> = {
       friendly: '친근하고 따뜻한 이웃 같은 말투. 해요체 위주. "~했어요", "~더라고요" 같은 구어체 자연스럽게 사용.',
@@ -137,52 +140,6 @@ ${photoSection}
 
 중요: 사진의 역할과 설명을 참고해서 글의 흐름을 구성하세요.
 글 중간에 [사진 1], [사진 2] 등으로 사진 삽입 위치를 표시해주세요.`
-
-    // === Claude로 다듬기 모드 ===
-    if (mode === 'refine' && apiKey) {
-      const anthropic = new Anthropic({ apiKey })
-      const refinePrompt = `아래 블로그 글을 더 자연스럽게 다듬어주세요.
-
-규칙:
-- AI가 쓴 티가 나는 표현을 전부 제거하세요
-- 문장 흐름이 어색한 부분을 자연스럽게 수정하세요
-- 전체 구조는 유지하되, 표현만 사람답게 바꿔주세요
-- 마크다운 문법 사용 금지. 순수 텍스트만.
-
-원본 글:
-${topic}`
-
-      const stream = anthropic.messages.stream({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: refinePrompt }],
-      })
-
-      const encoder = new TextEncoder()
-      const readable = new ReadableStream({
-        async start(controller) {
-          try {
-            for await (const event of stream) {
-              if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-                controller.enqueue(encoder.encode(event.delta.text))
-              }
-            }
-            controller.close()
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : 'Stream error'
-            controller.enqueue(encoder.encode(`\n\n[오류: ${msg}]`))
-            controller.close()
-          }
-        },
-      })
-      return new Response(readable, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
-    }
-
-    // === 무료 모드 (Gemini Flash) ===
-    const geminiKey = process.env.GEMINI_API_KEY || apiKey
-    if (!geminiKey) {
-      return Response.json({ error: 'API 키가 필요합니다.' }, { status: 400 })
-    }
 
     const genAI = new GoogleGenerativeAI(geminiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })

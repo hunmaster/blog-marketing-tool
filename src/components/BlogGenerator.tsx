@@ -50,7 +50,7 @@ function resizeImage(dataUrl: string, maxWidth = 800): Promise<string> {
   })
 }
 
-export default function BlogGenerator({ businessInfo, apiKey }: { businessInfo: BusinessInfo; apiKey: string }) {
+export default function BlogGenerator({ businessInfo }: { businessInfo: BusinessInfo }) {
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [style, setStyle] = useState('review')
   const [topic, setTopic] = useState('')
@@ -156,7 +156,6 @@ export default function BlogGenerator({ businessInfo, apiKey }: { businessInfo: 
           style,
           topic,
           keywords,
-          apiKey,
           photos: photos.map((p) => ({
             src: p.src,
             role: p.role,

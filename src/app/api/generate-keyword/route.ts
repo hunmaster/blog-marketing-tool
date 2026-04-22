@@ -4,11 +4,11 @@ import { NextRequest } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { businessInfo, customTopic, apiKey } = body
+    const { businessInfo, customTopic } = body
 
-    const geminiKey = process.env.GEMINI_API_KEY || apiKey
+    const geminiKey = process.env.GEMINI_API_KEY
     if (!geminiKey) {
-      return Response.json({ error: 'API 키가 필요합니다.' }, { status: 400 })
+      return Response.json({ error: '서버 설정 오류입니다. 관리자에게 문의해주세요.' }, { status: 500 })
     }
 
     const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.

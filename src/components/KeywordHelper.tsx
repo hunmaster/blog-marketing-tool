@@ -18,7 +18,7 @@ type ResearchResult = {
   totalFound: number
 }
 
-export default function KeywordHelper({ businessInfo, apiKey }: { businessInfo: BusinessInfo; apiKey: string }) {
+export default function KeywordHelper({ businessInfo }: { businessInfo: BusinessInfo }) {
   const [customTopic, setCustomTopic] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingAi, setLoadingAi] = useState(false)
@@ -68,7 +68,7 @@ export default function KeywordHelper({ businessInfo, apiKey }: { businessInfo: 
       const res = await fetch('/api/generate-keyword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessInfo, customTopic, apiKey }),
+        body: JSON.stringify({ businessInfo, customTopic }),
       })
 
       if (!res.ok) {
