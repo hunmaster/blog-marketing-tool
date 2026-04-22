@@ -23,15 +23,30 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
               <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-[var(--color-dark)] mb-2">API 키 설정</h1>
-          <p className="text-gray-500 text-sm">글을 생성하려면 Claude API 키가 필요해요</p>
+          <h1 className="text-2xl font-bold text-[var(--color-dark)] mb-2">시작하기</h1>
+          <p className="text-gray-500 text-sm">글을 자동으로 써주는 AI를 연결해볼게요</p>
         </div>
       )}
 
-      {/* 안내 가이드 */}
+      {/* Claude 설명 */}
+      {!isModal && (
+        <div className="bg-[var(--color-primary-light)] rounded-2xl p-5 mb-4">
+          <h3 className="text-sm font-semibold text-[var(--color-dark)] mb-2">글써주는집은 어떻게 작동하나요?</h3>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            <strong>Claude</strong>는 세계적인 AI 회사 Anthropic이 만든 글쓰기 AI예요.
+            사진과 업체 정보를 넣으면 사람이 쓴 것처럼 자연스러운 블로그 글을 만들어줍니다.
+          </p>
+          <p className="text-xs text-gray-600 leading-relaxed mt-2">
+            <strong>API 키</strong>는 이 AI를 사용하기 위한 비밀번호 같은 거예요.
+            한 번만 발급받으면 계속 쓸 수 있고, 아래 순서대로 따라하면 1분이면 완료됩니다.
+          </p>
+        </div>
+      )}
+
+      {/* 발급 가이드 */}
       {!isModal && (
         <div className="bg-[var(--color-gray-bg)] rounded-2xl p-5 mb-6">
-          <h3 className="text-sm font-semibold text-[var(--color-dark)] mb-3">API 키 발급받는 방법</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-dark)] mb-3">API 키 발급받기 (1분 소요)</h3>
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</div>
