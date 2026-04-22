@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FF6B35;
+  --color-primary-dark: #E85D2C;
+  --color-primary-light: #FFF3EE;
+  --color-primary-bg: #FFF8F5;
+  --color-dark: #1B1D21;
+  --color-gray-bg: #F8F9FA;
+  --color-border: #E5E7EB;
+  --color-green: #10B981;
+  --color-blue: #3B82F6;
+  --color-purple: #8B5CF6;
+  --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Base */
+body {
+  font-family: var(--font-sans);
+  color: var(--color-dark);
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #ccc; }
+
+/* Textarea */
+textarea:focus, input:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+/* Result content styling */
+.result-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--color-dark);
+}
+
+.result-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--color-dark);
+}
+
+.result-content p {
+  margin: 0.5rem 0;
+  line-height: 1.8;
+  color: #374151;
+}
+
+.result-content ul, .result-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.result-content li {
+  margin: 0.25rem 0;
+  line-height: 1.7;
+}
+
+.result-content strong {
+  color: var(--color-dark);
+}
+
+/* Photo grid */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.photo-grid img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--color-border);
+  transition: border-color 0.2s;
+}
+
+.photo-grid img:hover {
+  border-color: var(--color-primary);
+}
+
+/* Loading animation */
+@keyframes pulse-dot {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.loading-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: pulse-dot 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+/* Tab active indicator */
+.tab-active {
+  position: relative;
+}
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 3px 3px 0 0;
+}
