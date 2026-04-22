@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 ${customTopic ? `추가 주제: ${customTopic}` : ''}`
 
     const genAI = new GoogleGenerativeAI(geminiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
     const result = await model.generateContentStream(prompt)
 
     const encoder = new TextEncoder()

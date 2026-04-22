@@ -142,7 +142,7 @@ ${photoSection}
 글 중간에 [사진 1], [사진 2] 등으로 사진 삽입 위치를 표시해주세요.`
 
     const genAI = new GoogleGenerativeAI(geminiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const parts: (string | { inlineData: { mimeType: string; data: string } })[] = []
     // 사진 추가

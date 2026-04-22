@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 캡션 스타일: ${typeMap[captionType] || captionType}`
 
     const genAI = new GoogleGenerativeAI(geminiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
     const result = await model.generateContentStream(prompt)
 
     const encoder = new TextEncoder()
