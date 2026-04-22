@@ -82,8 +82,8 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
             <div className="flex items-start gap-2">
               <span className="text-sm">💡</span>
               <div>
-                <p className="text-xs text-gray-600"><strong>비용 안내:</strong> 블로그 글 1편 생성에 약 50~100원 정도 비용이 발생해요.</p>
-                <p className="text-xs text-gray-400 mt-0.5">신규 가입 시 $5 무료 크레딧이 제공됩니다 (약 50편 이상 생성 가능)</p>
+                <p className="text-xs text-gray-600"><strong>비용 안내:</strong> 블로그 글 1편에 약 5~15원 수준이에요.</p>
+                <p className="text-xs text-gray-400 mt-0.5">하루 커피 한 잔 값이면 한 달 블로그 운영이 가능해요</p>
               </div>
             </div>
           </div>

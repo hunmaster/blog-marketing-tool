@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 5. 마크다운 문법 사용 금지. 순수 텍스트만.`
 
     const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
       system: systemPrompt,
       messages: [{

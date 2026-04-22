@@ -128,7 +128,7 @@ ${photoSection}
 - "이상으로 ○○에 대해 알아보았습니다" 같은 뻔한 마무리 금지.`
 
     const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
       system: systemPrompt,
       messages: [{ role: 'user', content: contentParts }],
