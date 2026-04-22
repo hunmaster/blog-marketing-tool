@@ -12,7 +12,7 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
   const [key, setKey] = useState(defaultValue || '')
   const [showKey, setShowKey] = useState(false)
 
-  const isValid = key.trim().startsWith('sk-ant-')
+  const isValid = key.trim().length > 10
 
   return (
     <div className={isModal ? 'p-6' : 'max-w-lg mx-auto px-4 pt-12'}>
@@ -24,21 +24,21 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-[var(--color-dark)] mb-2">시작하기</h1>
-          <p className="text-gray-500 text-sm">글을 자동으로 써주는 AI를 연결해볼게요</p>
+          <p className="text-gray-500 text-sm">구글 계정만 있으면 바로 시작할 수 있어요</p>
         </div>
       )}
 
-      {/* Claude 설명 */}
+      {/* 설명 */}
       {!isModal && (
         <div className="bg-[var(--color-primary-light)] rounded-2xl p-5 mb-4">
           <h3 className="text-sm font-semibold text-[var(--color-dark)] mb-2">글써주는집은 어떻게 작동하나요?</h3>
           <p className="text-xs text-gray-600 leading-relaxed">
-            <strong>Claude</strong>는 세계적인 AI 회사 Anthropic이 만든 글쓰기 AI예요.
-            사진과 업체 정보를 넣으면 사람이 쓴 것처럼 자연스러운 블로그 글을 만들어줍니다.
+            사진과 업체 정보를 넣으면 <strong>AI가 사람처럼 자연스러운 블로그 글</strong>을 만들어줘요.
+            Google의 AI 기술을 활용하며, <strong>완전 무료</strong>로 사용할 수 있습니다.
           </p>
           <p className="text-xs text-gray-600 leading-relaxed mt-2">
-            <strong>API 키</strong>는 이 AI를 사용하기 위한 비밀번호 같은 거예요.
-            한 번만 발급받으면 계속 쓸 수 있고, 아래 순서대로 따라하면 1분이면 완료됩니다.
+            <strong>API 키</strong>는 AI를 사용하기 위한 비밀번호 같은 거예요.
+            구글 계정으로 로그인하면 바로 발급받을 수 있어요.
           </p>
         </div>
       )}
@@ -46,14 +46,14 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
       {/* 발급 가이드 */}
       {!isModal && (
         <div className="bg-[var(--color-gray-bg)] rounded-2xl p-5 mb-6">
-          <h3 className="text-sm font-semibold text-[var(--color-dark)] mb-3">API 키 발급받기 (1분 소요)</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-dark)] mb-3">API 키 발급받기 (30초 완료)</h3>
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</div>
               <div>
-                <p className="text-sm text-[var(--color-dark)]">아래 버튼을 눌러 Anthropic 사이트에 접속해주세요</p>
+                <p className="text-sm text-[var(--color-dark)]">아래 버튼을 눌러 Google AI Studio에 접속해주세요</p>
                 <a
-                  href="https://console.anthropic.com/settings/keys"
+                  href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 mt-1.5 px-4 py-2 bg-[var(--color-primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
@@ -63,7 +63,7 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
                     <polyline points="15,3 21,3 21,9" />
                     <line x1="10" y1="14" x2="21" y2="3" />
                   </svg>
-                  Anthropic API 키 발급 페이지 바로가기
+                  Google AI API 키 발급 (무료)
                 </a>
               </div>
             </div>
@@ -71,16 +71,16 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
             <div className="flex gap-3">
               <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</div>
               <div>
-                <p className="text-sm text-[var(--color-dark)]">회원가입 후 로그인해주세요</p>
-                <p className="text-xs text-gray-400 mt-0.5">구글 계정으로 간편 가입 가능</p>
+                <p className="text-sm text-[var(--color-dark)]">구글 계정으로 로그인해주세요</p>
+                <p className="text-xs text-gray-400 mt-0.5">이미 구글 계정이 있으면 바로 로그인돼요</p>
               </div>
             </div>
 
             <div className="flex gap-3">
               <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</div>
               <div>
-                <p className="text-sm text-[var(--color-dark)]">"Create Key" 버튼을 클릭해서 키를 생성해주세요</p>
-                <p className="text-xs text-gray-400 mt-0.5">이름은 아무거나 적어도 돼요 (예: 블로그용)</p>
+                <p className="text-sm text-[var(--color-dark)]">"Create API Key" 버튼을 클릭해주세요</p>
+                <p className="text-xs text-gray-400 mt-0.5">프로젝트 선택 팝업이 나오면 아무거나 선택하면 돼요</p>
               </div>
             </div>
 
@@ -88,17 +88,17 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
               <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">4</div>
               <div>
                 <p className="text-sm text-[var(--color-dark)]">생성된 키를 복사해서 아래에 붙여넣기 해주세요</p>
-                <p className="text-xs text-gray-400 mt-0.5">sk-ant- 으로 시작하는 긴 코드예요</p>
+                <p className="text-xs text-gray-400 mt-0.5">AIza... 로 시작하는 코드예요</p>
               </div>
             </div>
           </div>
 
           <div className="mt-4 p-3 bg-white rounded-xl border border-[var(--color-border)]">
             <div className="flex items-start gap-2">
-              <span className="text-sm">💡</span>
+              <span className="text-green-500 text-sm font-bold">무료</span>
               <div>
-                <p className="text-xs text-gray-600"><strong>비용 안내:</strong> 블로그 글 1편에 약 5~15원 수준이에요.</p>
-                <p className="text-xs text-gray-400 mt-0.5">하루 커피 한 잔 값이면 한 달 블로그 운영이 가능해요</p>
+                <p className="text-xs text-gray-600">블로그 글, 릴스 캡션, 키워드 추천 모두 <strong>무료</strong>예요.</p>
+                <p className="text-xs text-gray-400 mt-0.5">카드 등록도 필요 없어요. 하루 1,500회까지 사용 가능합니다.</p>
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
           <div className="relative">
             <input
               type={showKey ? 'text' : 'password'}
-              placeholder="sk-ant-api03-..."
+              placeholder="AIza..."
               value={key}
               onChange={(e) => setKey(e.target.value)}
               className="w-full px-4 py-3 pr-20 rounded-xl border border-[var(--color-border)] text-sm bg-white transition-all font-mono"
@@ -129,15 +129,9 @@ export default function ApiKeySetup({ onComplete, isModal, defaultValue }: Props
           </p>
         </div>
 
-        {/* 입력값 검증 피드백 */}
-        {key && !isValid && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg">
-            <span className="text-red-500 text-xs">sk-ant- 으로 시작하는 올바른 키를 입력해주세요</span>
-          </div>
-        )}
         {isValid && (
           <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
-            <span className="text-green-600 text-xs">올바른 형식의 키입니다</span>
+            <span className="text-green-600 text-xs">키가 입력되었습니다</span>
           </div>
         )}
 

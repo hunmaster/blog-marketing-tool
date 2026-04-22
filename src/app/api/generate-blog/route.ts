@@ -1,17 +1,12 @@
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { businessInfo, style, topic, keywords, photos, apiKey: userApiKey } = body
-
-    const apiKey = userApiKey || process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return Response.json({ error: 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.' }, { status: 400 })
-    }
-
-    const anthropic = new Anthropic({ apiKey })
+    const { businessInfo, style, topic, keywords, photos, apiKey, mode } = body
+    // mode: 'free' (Gemini) | 'refine' (Claude로 다듬기)
 
     const toneMap: Record<string, string> = {
       friendly: '친근하고 따뜻한 이웃 같은 말투. 해요체 위주. "~했어요", "~더라고요" 같은 구어체 자연스럽게 사용.',
@@ -28,80 +23,9 @@ export async function POST(request: NextRequest) {
     }
 
     const roleLabels: Record<string, string> = {
-      before: '시공 전',
-      after: '시공 후',
-      process: '작업 과정',
-      result: '완성 결과',
-      detail: '디테일 컷',
-      space: '매장/공간',
-      product: '상품/메뉴',
-      etc: '기타',
+      before: '시공 전', after: '시공 후', process: '작업 과정', result: '완성 결과',
+      detail: '디테일 컷', space: '매장/공간', product: '상품/메뉴', etc: '기타',
     }
-
-    // 사진 정보를 텍스트로 정리
-    const photoDescriptions: string[] = []
-    const contentParts: Anthropic.Messages.ContentBlockParam[] = []
-
-    if (photos && photos.length > 0) {
-      // 최대 5장만 이미지로 전송 (토큰 절약)
-      const photosToSend = photos.slice(0, 5)
-
-      for (let i = 0; i < photosToSend.length; i++) {
-        const photo = photosToSend[i]
-        const base64Match = photo.src?.match(/^data:image\/(.*?);base64,(.*)$/)
-
-        if (base64Match) {
-          contentParts.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: `image/${base64Match[1]}` as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-              data: base64Match[2],
-            },
-          })
-        }
-
-        const roleLabel = roleLabels[photo.role] || '기타'
-        const captionText = photo.caption ? ` - ${photo.caption}` : ''
-        photoDescriptions.push(`사진 ${i + 1}: [${roleLabel}]${captionText}`)
-      }
-
-      // 5장 이후 사진은 텍스트 설명만
-      for (let i = 5; i < photos.length; i++) {
-        const photo = photos[i]
-        const roleLabel = roleLabels[photo.role] || '기타'
-        const captionText = photo.caption ? ` - ${photo.caption}` : ''
-        photoDescriptions.push(`사진 ${i + 1}: [${roleLabel}]${captionText} (이미지 미첨부)`)
-      }
-    }
-
-    const photoSection = photoDescriptions.length > 0
-      ? `\n\n사진 구성 (사용자가 올린 순서대로):\n${photoDescriptions.join('\n')}`
-      : '\n\n(사진 없음 - 텍스트 기반으로 작성)'
-
-    contentParts.push({
-      type: 'text',
-      text: `블로그 글을 작성해주세요.
-
-업체 정보:
-- 업체명: ${businessInfo.name}
-- 업종: ${businessInfo.category}
-- 지역: ${businessInfo.region}
-- 강점: ${businessInfo.strengths}
-
-글 요청:
-- 글 스타일: ${styleMap[style] || style}
-- 주제: ${topic || '사진 내용을 바탕으로 자유롭게'}
-- 넣어야 할 키워드: ${keywords || '없음'}
-- 총 사진 수: ${photos?.length || 0}장
-${photoSection}
-
-중요: 사진의 역할(시공 전/후, 작업 과정 등)과 설명을 참고해서 글의 흐름을 구성하세요.
-- "시공 전" → "작업 과정" → "시공 후" 순서라면 자연스럽게 변화 과정을 서술
-- "비포&애프터"라면 전후 대비를 강조
-- 글 중간에 [사진 1], [사진 2] 등으로 사진 삽입 위치를 표시해주세요
-- 사용자가 적어준 사진 설명이 있다면 그 내용을 글에 자연스럽게 반영하세요`,
-    })
 
     // 매번 다른 글을 위한 랜덤 요소
     const openingStyles = [
@@ -116,17 +40,10 @@ ${photoSection}
       '비하인드 스토리로 시작',
       '감탄사로 시작 ("와, 이번 건은 진짜...")',
     ]
-    const randomOpening = openingStyles[Math.floor(Math.random() * openingStyles.length)]
-
     const closingStyles = [
-      '다음 작업 예고로 마무리',
-      '고객 만족 한마디로 마무리',
-      '짧은 소감 한 줄로 마무리',
-      '계절/날씨와 연결해서 마무리',
-      '문의 안내 없이 자연스럽게 끝내기',
+      '다음 작업 예고로 마무리', '고객 만족 한마디로 마무리', '짧은 소감 한 줄로 마무리',
+      '계절/날씨와 연결해서 마무리', '문의 안내 없이 자연스럽게 끝내기',
     ]
-    const randomClosing = closingStyles[Math.floor(Math.random() * closingStyles.length)]
-
     const structureStyles = [
       '소제목 없이 자연스러운 이야기체로 쭉 이어가기',
       '소제목 2개만 사용해서 구분하기',
@@ -134,7 +51,39 @@ ${photoSection}
       '대화체를 섞어서 쓰기 ("사장님이 그러시더라고요...")',
       '시간순으로 풀어가기 (아침→점심→완성)',
     ]
+    const randomOpening = openingStyles[Math.floor(Math.random() * openingStyles.length)]
+    const randomClosing = closingStyles[Math.floor(Math.random() * closingStyles.length)]
     const randomStructure = structureStyles[Math.floor(Math.random() * structureStyles.length)]
+
+    // 사진 정보 구성
+    const photoDescriptions: string[] = []
+    const geminiParts: { inlineData: { mimeType: string; data: string } }[] = []
+
+    if (photos && photos.length > 0) {
+      const photosToSend = photos.slice(0, 5)
+      for (let i = 0; i < photosToSend.length; i++) {
+        const photo = photosToSend[i]
+        const base64Match = photo.src?.match(/^data:image\/(.*?);base64,(.*)$/)
+        if (base64Match) {
+          geminiParts.push({
+            inlineData: { mimeType: `image/${base64Match[1]}`, data: base64Match[2] },
+          })
+        }
+        const roleLabel = roleLabels[photo.role] || '기타'
+        const captionText = photo.caption ? ` - ${photo.caption}` : ''
+        photoDescriptions.push(`사진 ${i + 1}: [${roleLabel}]${captionText}`)
+      }
+      for (let i = 5; i < photos.length; i++) {
+        const photo = photos[i]
+        const roleLabel = roleLabels[photo.role] || '기타'
+        const captionText = photo.caption ? ` - ${photo.caption}` : ''
+        photoDescriptions.push(`사진 ${i + 1}: [${roleLabel}]${captionText} (이미지 미첨부)`)
+      }
+    }
+
+    const photoSection = photoDescriptions.length > 0
+      ? `\n\n사진 구성 (순서대로):\n${photoDescriptions.join('\n')}`
+      : '\n\n(사진 없음 - 텍스트 기반으로 작성)'
 
     const systemPrompt = `당신은 실제 소상공인 사장님이 직접 블로그를 쓰는 것처럼 글을 대필하는 작성자입니다.
 
@@ -146,7 +95,7 @@ ${photoSection}
 [말투 규칙]
 ${toneMap[businessInfo.tone] || toneMap.friendly}
 
-[AI 냄새 제거 - 가장 중요]
+[AI 냄새 제거 - 가장 중요!!!]
 절대 사용 금지 단어/표현:
 - "다양한", "특별한", "완벽한", "훌륭한", "놀라운", "획기적인", "최상의", "최고의"
 - "또한", "더불어", "뿐만 아니라", "나아가", "한편", "이처럼", "그러므로"
@@ -171,38 +120,101 @@ ${toneMap[businessInfo.tone] || toneMap.friendly}
 7. 이모지 최대 2-3개만. 없어도 됨.
 8. 연락처 유도는 글 맨 끝에 한 번만, 자연스럽게.`
 
-    const stream = anthropic.messages.stream({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: contentParts }],
-    })
+    const userPrompt = `블로그 글을 작성해주세요.
+
+업체 정보:
+- 업체명: ${businessInfo.name}
+- 업종: ${businessInfo.category}
+- 지역: ${businessInfo.region}
+- 강점: ${businessInfo.strengths}
+
+글 요청:
+- 글 스타일: ${styleMap[style] || style}
+- 주제: ${topic || '사진 내용을 바탕으로 자유롭게'}
+- 넣어야 할 키워드: ${keywords || '없음'}
+- 총 사진 수: ${photos?.length || 0}장
+${photoSection}
+
+중요: 사진의 역할과 설명을 참고해서 글의 흐름을 구성하세요.
+글 중간에 [사진 1], [사진 2] 등으로 사진 삽입 위치를 표시해주세요.`
+
+    // === Claude로 다듬기 모드 ===
+    if (mode === 'refine' && apiKey) {
+      const anthropic = new Anthropic({ apiKey })
+      const refinePrompt = `아래 블로그 글을 더 자연스럽게 다듬어주세요.
+
+규칙:
+- AI가 쓴 티가 나는 표현을 전부 제거하세요
+- 문장 흐름이 어색한 부분을 자연스럽게 수정하세요
+- 전체 구조는 유지하되, 표현만 사람답게 바꿔주세요
+- 마크다운 문법 사용 금지. 순수 텍스트만.
+
+원본 글:
+${topic}`
+
+      const stream = anthropic.messages.stream({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: refinePrompt }],
+      })
+
+      const encoder = new TextEncoder()
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const event of stream) {
+              if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+                controller.enqueue(encoder.encode(event.delta.text))
+              }
+            }
+            controller.close()
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Stream error'
+            controller.enqueue(encoder.encode(`\n\n[오류: ${msg}]`))
+            controller.close()
+          }
+        },
+      })
+      return new Response(readable, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+    }
+
+    // === 무료 모드 (Gemini Flash) ===
+    const geminiKey = process.env.GEMINI_API_KEY || apiKey
+    if (!geminiKey) {
+      return Response.json({ error: 'API 키가 필요합니다.' }, { status: 400 })
+    }
+
+    const genAI = new GoogleGenerativeAI(geminiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+    const parts: (string | { inlineData: { mimeType: string; data: string } })[] = []
+    // 사진 추가
+    for (const part of geminiParts) {
+      parts.push(part)
+    }
+    // 프롬프트 추가
+    parts.push(systemPrompt + '\n\n---\n\n' + userPrompt)
+
+    const result = await model.generateContentStream(parts)
 
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of stream) {
-            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              controller.enqueue(encoder.encode(event.delta.text))
-            }
+          for await (const chunk of result.stream) {
+            const text = chunk.text()
+            if (text) controller.enqueue(encoder.encode(text))
           }
           controller.close()
-        } catch (streamError) {
-          console.error('Stream error:', streamError)
-          const msg = streamError instanceof Error ? streamError.message : 'Stream error'
-          controller.enqueue(encoder.encode(`\n\n[오류 발생: ${msg}]`))
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[오류: ${msg}]`))
           controller.close()
         }
       },
     })
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-      },
-    })
+    return new Response(readable, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   } catch (error: unknown) {
     console.error('Blog generation error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'

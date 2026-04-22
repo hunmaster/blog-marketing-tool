@@ -398,20 +398,36 @@ export default function BlogGenerator({ businessInfo, apiKey }: { businessInfo: 
       </button>
 
       {/* 결과 */}
-      {result && (
+      {result && !result.startsWith('오류:') && (
         <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-gray-bg)] border-b border-[var(--color-border)]">
             <span className="text-sm font-semibold text-[var(--color-dark)]">생성된 블로그 글</span>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
-            >
-              {copied ? '✓ 복사됨' : '복사하기'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
+              >
+                다시 쓰기
+              </button>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
+              >
+                {copied ? '✓ 복사됨' : '복사하기'}
+              </button>
+            </div>
           </div>
           <div className="p-5 result-content whitespace-pre-wrap text-sm leading-relaxed">
             {result}
           </div>
+        </div>
+      )}
+
+      {/* 에러 표시 */}
+      {result && result.startsWith('오류:') && (
+        <div className="border border-red-200 rounded-2xl p-5 bg-red-50">
+          <p className="text-sm text-red-600">{result}</p>
         </div>
       )}
     </div>
